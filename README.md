@@ -1,54 +1,74 @@
-# 影片片段重複播放器（行動裝置版）
+# 影片片段重複器
 
-這是一個跨平台的 React Native 應用程式，可以讓您在行動裝置上儲存和重複播放影片的特定片段。
+這是一個使用 React Native 開發的應用程式，可以指定影片的特定片段並重複播放。
 
-## 功能特點
+## 功能
 
-- 支援輸入影片網址、曲名和時間段
-- 自動儲存已設定的片段
-- 點擊列表中的項目即可重複播放該片段
-- 支援 iOS 和 Android 平台
-- 直覺的觸控介面
+- 載入各種來源的影片
+- 設定起始時間和結束時間
+- 自動循環播放選定的片段
+- 支援多個平台：iOS、Android 和網頁
 
-## 安裝需求
+## 開發設置
 
-1. Node.js 16.0 或更新版本
-2. npm 或 yarn
-3. React Native CLI
-4. iOS 開發需要 Xcode（僅限 macOS）
-5. Android 開發需要 Android Studio
+### 系統需求
 
-## 安裝步驟
+- Node.js 20 或以上
+- npm 或 yarn
+- React Native 開發環境
 
-1. 安裝必要的開發工具：
-   ```bash
-   # 安裝 React Native CLI
-   npm install -g react-native-cli
-   
-   # 安裝專案依賴
+### 安裝
+
+1. 克隆此存儲庫：
+   ```
+   git clone https://github.com/yourusername/clip-repeater.git
+   cd clip-repeater
+   ```
+
+2. 安裝依賴：
+   ```
    npm install
    ```
 
-2. 執行應用程式：
-   ```bash
-   # iOS
-   npx react-native run-ios
-   
-   # Android
-   npx react-native run-android
+### 執行開發版本
+
+- **網頁版**：
+  ```
+  npm start
+  ```
+
+- **iOS**：
+  ```
+  npm run ios
+  ```
+
+- **Android**：
+  ```
+  npm run android
+  ```
+
+### Android 開發設置
+
+若要設置 Android 開發環境，需要以下步驟：
+
+1. 安裝 Android Studio 和 Android SDK
+2. 設置 ANDROID_HOME 環境變量指向 Android SDK 位置
+3. 生成 debug.keystore（如果不存在）：
+   ```
+   cd android/app
+   keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000
    ```
 
-## 使用方法
+4. 如需發佈版本，請在 `android/gradle.properties` 中設置您的簽名密鑰資訊
 
-1. 開啟應用程式
-2. 點擊「新增片段」按鈕
-3. 輸入影片網址、曲名和時間段
-4. 點擊「儲存」按鈕
-5. 在列表中點擊項目即可播放該片段
+## GitHub Actions 工作流程
 
-## 注意事項
+本專案包含自動化編譯工作流程，它能夠：
 
-- 請確保影片網址是可播放的
-- 時間格式必須為「分:秒-分:秒」的格式
-- 所有欄位都必須填寫
-- 首次執行時需要授予應用程式存取儲存空間的權限 
+- 編譯多平台應用程式（Windows、macOS、Linux）
+- 編譯 Android APK
+- 在發佈標籤時自動創建發佈版本
+
+## 貢獻
+
+歡迎提交問題和貢獻！請使用拉取請求。 
