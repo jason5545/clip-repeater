@@ -1,0 +1,114 @@
+name: 跨平台編譯
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: 編譯 ${{ matrix.os }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        arch: [x64]
+        include:
+          - os: ubuntu-latest
+            arch: arm64
+          - os: macos-latest
+            arch: arm64
+
+    steps:
+      - name: 取得原始碼
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 設定 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          architecture: ${{ matrix.arch }}
+
+      - name: 安裝相依套件
+        run: npm ci
+
+      - name: 編譯程式
+        run: npm run build
+
+      - name: 打包應用程式
+        run: |
+          mkdir -p ./dist/app-${{ matrix.os }}-${{ matrix.arch }}
+          cp -r ./dist/* ./dist/app-${{ matrix.os }}-${{ matrix.arch }}/ || true
+          
+      - name: 上傳編譯結果
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-${{ matrix.os }}-${{ matrix.arch }}
+          path: ./dist/app-${{ matrix.os }}-${{ matrix.arch }}
+  
+  build-android:
+    name: 編譯 Android
+    runs-on: ubuntu-latest
+    steps:
+      - name: 取得原始碼
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 設定 JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: gradle
+
+      - name: 設定 Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 設定 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 安裝相依套件
+        run: npm ci
+
+      - name: 編譯 Android 應用程式
+        run: |
+          # 如果使用 React Native
+          cd android && ./gradlew assembleRelease
+          # 如果使用 Capacitor/Ionic
+          # npx cap sync android
+          # cd android && ./gradlew assembleRelease
+          
+      - name: 上傳 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-android
+          path: android/app/build/outputs/apk/release/*.apk
+  
+  release:
+    name: 發布版本
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, build-android]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 下載所有編譯結果
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: 建立發布版本
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./artifacts/**/*
+          draft: true
+          generate_release_notes: true 
