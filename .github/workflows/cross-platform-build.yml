@@ -42,10 +42,19 @@ jobs:
       - name: 編譯程式
         run: npm run build
 
-      - name: 打包應用程式
+      - name: 打包應用程式 (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
         run: |
           mkdir -p ./dist/app-${{ matrix.os }}-${{ matrix.arch }}
           cp -r ./dist/* ./dist/app-${{ matrix.os }}-${{ matrix.arch }}/ || true
+          
+      - name: 打包應用程式 (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          New-Item -Path ./dist/app-${{ matrix.os }}-${{ matrix.arch }} -ItemType Directory -Force
+          Get-ChildItem -Path ./dist -Exclude app-* | Copy-Item -Destination ./dist/app-${{ matrix.os }}-${{ matrix.arch }}/ -Recurse -Force -ErrorAction SilentlyContinue
           
       - name: 上傳編譯結果
         uses: actions/upload-artifact@v4
@@ -81,19 +90,25 @@ jobs:
       - name: 安裝相依套件
         run: npm ci
 
+      - name: 設定 Android 構建腳本權限
+        run: chmod +x ./android/gradlew
+
       - name: 編譯 Android 應用程式
         run: |
-          # 如果使用 React Native
-          cd android && ./gradlew assembleRelease
-          # 如果使用 Capacitor/Ionic
-          # npx cap sync android
-          # cd android && ./gradlew assembleRelease
+          # 確認 android 目錄存在
+          if [ -d "android" ]; then
+            cd android && ./gradlew assembleRelease
+          else
+            echo "Android 目錄不存在，請檢查專案結構"
+            exit 1
+          fi
           
       - name: 上傳 APK
         uses: actions/upload-artifact@v4
         with:
           name: app-android
           path: android/app/build/outputs/apk/release/*.apk
+        if: success()
   
   release:
     name: 發布版本
@@ -105,6 +120,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ./artifacts
+
+      - name: 顯示下載的檔案結構
+        run: find ./artifacts -type f | sort
 
       - name: 建立發布版本
         uses: softprops/action-gh-release@v1
