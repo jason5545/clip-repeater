@@ -1,74 +1,48 @@
 # 影片片段重複器
 
-這是一個使用 React Native 開發的應用程式，可以指定影片的特定片段並重複播放。
+**專案簡介**  
+影片片段重複播放工具，可儲存並重複播放指定時間段的影片。
 
-## 功能
+**功能**  
+- 設定影片網址、曲名與時間段（格式：00:00-01:30）。  
+- 列表檢視已儲存片段，並支援播放、刪除功能。  
+- 以 localStorage 儲存片段清單，關閉後仍可保留。
 
-- 載入各種來源的影片
-- 設定起始時間和結束時間
-- 自動循環播放選定的片段
-- 支援多個平台：iOS、Android 和網頁
-
-## 開發設置
-
-### 系統需求
-
-- Node.js 20 或以上
-- npm 或 yarn
-- React Native 開發環境
-
-### 安裝
-
-1. 克隆此存儲庫：
+**安裝與使用**  
+1. 將本專案複製至本機：  
+   ```bash
+   git clone <專案網址>
    ```
-   git clone https://github.com/yourusername/clip-repeater.git
+2. 進入專案目錄：  
+   ```bash
    cd clip-repeater
    ```
+3. 啟動簡易 HTTP 伺服器（選擇任一）：  
+   ```bash
+   # Python 3
+   python -m http.server 8000
 
-2. 安裝依賴：
+   # Node.js 內建 http-server 模組
+   npx http-server . -p 8000
    ```
-   npm install
+4. 開啟瀏覽器並造訪：  
+   ```text
+   http://localhost:8000
    ```
+5. 在介面輸入影片網址、曲名、時間段後點擊「儲存」即可使用。
 
-### 執行開發版本
+**專案結構**  
+```
+/                專案根目錄
+├─ index.html    主程式檔案
+└─ README.md     專案說明文件
+```
 
-- **網頁版**：
-  ```
-  npm start
-  ```
+**瀏覽器支援**  
+- 支援 Chrome、Firefox、Safari、Edge 等現代瀏覽器。
 
-- **iOS**：
-  ```
-  npm run ios
-  ```
+**授權**  
+本專案採 MIT 授權。
 
-- **Android**：
-  ```
-  npm run android
-  ```
-
-### Android 開發設置
-
-若要設置 Android 開發環境，需要以下步驟：
-
-1. 安裝 Android Studio 和 Android SDK
-2. 設置 ANDROID_HOME 環境變量指向 Android SDK 位置
-3. 生成 debug.keystore（如果不存在）：
-   ```
-   cd android/app
-   keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000
-   ```
-
-4. 如需發佈版本，請在 `android/gradle.properties` 中設置您的簽名密鑰資訊
-
-## GitHub Actions 工作流程
-
-本專案包含自動化編譯工作流程，它能夠：
-
-- 編譯多平台應用程式（Windows、macOS、Linux）
-- 編譯 Android APK
-- 在發佈標籤時自動創建發佈版本
-
-## 貢獻
-
-歡迎提交問題和貢獻！請使用拉取請求。 
+**貢獻**  
+歡迎提出議題 (Issue) 與拉取請求 (Pull Request)。 

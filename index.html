@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>影片片段重複器</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+    }
+    .container {
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .container h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .form input[type="url"],
+    .form input[type="text"] {
+      padding: 8px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .form button {
+      padding: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      background-color: #007bff;
+      color: #fff;
+      cursor: pointer;
+    }
+    .form button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    .error {
+      color: red;
+      font-size: 14px;
+      min-height: 20px;
+    }
+    .clips-list {
+      margin-top: 20px;
+    }
+    .clip-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    .clip-item .info {
+      flex: 1;
+    }
+    .clip-item button {
+      margin-left: 8px;
+      padding: 6px 12px;
+      font-size: 14px;
+    }
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal.hidden {
+      display: none;
+    }
+    .modal-content {
+      background: #000;
+      padding: 20px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .modal-content video {
+      max-width: 100%;
+      border-radius: 4px;
+    }
+    .modal-content button {
+      margin-top: 10px;
+      padding: 8px 16px;
+      font-size: 14px;
+    }
+  </style>
+  <script src="https://www.youtube.com/iframe_api"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>影片片段重複器</h1>
+    <div id="add-clip-form" class="form">
+      <input type="url" id="clip-url" placeholder="影片網址" />
+      <input type="text" id="clip-title" placeholder="曲名" />
+      <input type="text" id="clip-time-range" placeholder="時間段（格式：00:00-01:30）" />
+      <button id="save-clip-button" disabled>儲存</button>
+      <div id="error-message" class="error"></div>
+    </div>
+    <div id="clips-list" class="clips-list"></div>
+  </div>
+  <div id="video-modal" class="modal hidden">
+    <div class="modal-content">
+      <video id="video-player" controls></video>
+      <iframe id="youtube-player" class="hidden" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen style="max-width:100%; border-radius:4px;"></iframe>
+      <button id="close-video-button">關閉</button>
+    </div>
+  </div>
+  <script>
+    (function() {
+      const clipUrl = document.getElementById('clip-url');
+      const clipTitle = document.getElementById('clip-title');
+      const clipTime = document.getElementById('clip-time-range');
+      const saveBtn = document.getElementById('save-clip-button');
+      const errorMsg = document.getElementById('error-message');
+      const clipsList = document.getElementById('clips-list');
+      const videoModal = document.getElementById('video-modal');
+      const videoPlayer = document.getElementById('video-player');
+      const closeVideoBtn = document.getElementById('close-video-button');
+      const youtubePlayer = document.getElementById('youtube-player');
+
+      let clips = JSON.parse(localStorage.getItem('clips') || '[]');
+      let currentClip = null;
+
+      function validateTimeRange(str) {
+        const regex = /^\d{2}:\d{2}-\d{2}:\d{2}$/;
+        if (!regex.test(str)) return false;
+        const [start, end] = str.split('-');
+        const [sm, ss] = start.split(':').map(Number);
+        const [em, es] = end.split(':').map(Number);
+        if (sm < 0 || sm > 59 || ss < 0 || ss > 59 || em < 0 || em > 59 || es < 0 || es > 59) return false;
+        return sm * 60 + ss < em * 60 + es;
+      }
+
+      function updateSaveBtn() {
+        const ok = clipUrl.value.trim() && clipTitle.value.trim() && validateTimeRange(clipTime.value.trim());
+        saveBtn.disabled = !ok;
+        if (!ok && errorMsg.textContent) errorMsg.textContent = '';
+      }
+
+      clipUrl.oninput = updateSaveBtn;
+      clipTitle.oninput = updateSaveBtn;
+      clipTime.oninput = updateSaveBtn;
+
+      saveBtn.onclick = function() {
+        if (!clipUrl.value || !clipTitle.value || !clipTime.value) {
+          errorMsg.textContent = '請填寫所有欄位';
+          return;
+        }
+        if (!validateTimeRange(clipTime.value)) {
+          errorMsg.textContent = '時間格式不正確，請使用 00:00-01:30';
+          return;
+        }
+        const id = Date.now().toString();
+        clips.push({ id, url: clipUrl.value.trim(), title: clipTitle.value.trim(), timeRange: clipTime.value.trim() });
+        localStorage.setItem('clips', JSON.stringify(clips));
+        renderClips();
+        clipUrl.value = clipTitle.value = clipTime.value = '';
+        saveBtn.disabled = true;
+      };
+
+      function renderClips() {
+        clipsList.innerHTML = '';
+        if (clips.length === 0) {
+          clipsList.innerHTML = '<p>尚未添加任何影片片段</p>';
+          return;
+        }
+        clips.forEach(c => {
+          const div = document.createElement('div');
+          div.className = 'clip-item';
+          const info = document.createElement('div');
+          info.className = 'info';
+          info.innerHTML = '<strong>' + c.title + '</strong><br>' + c.timeRange;
+          const playBtn = document.createElement('button');
+          playBtn.textContent = '播放';
+          playBtn.onclick = () => playClip(c);
+          const delBtn = document.createElement('button');
+          delBtn.textContent = '刪除';
+          delBtn.onclick = () => {
+            clips = clips.filter(x => x.id !== c.id);
+            localStorage.setItem('clips', JSON.stringify(clips));
+            renderClips();
+          };
+          div.append(info, playBtn, delBtn);
+          clipsList.append(div);
+        });
+      }
+
+      function playClip(c) {
+        currentClip = c;
+        const [start, end] = c.timeRange.split('-');
+        const [sm, ss] = start.split(':').map(Number);
+        const [em, es] = end.split(':').map(Number);
+        const st = sm * 60 + ss;
+        const et = em * 60 + es;
+        // 判斷 YouTube 連結
+        const ytMatch = c.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/);
+        if (ytMatch) {
+          const vid = ytMatch[1];
+          videoPlayer.classList.add('hidden');
+          youtubePlayer.classList.remove('hidden');
+          youtubePlayer.src = `https://www.youtube.com/embed/${vid}?start=${st}&end=${et}&autoplay=1&loop=1&playlist=${vid}`;
+          videoModal.classList.remove('hidden');
+        } else {
+          youtubePlayer.classList.add('hidden');
+          videoPlayer.classList.remove('hidden');
+          videoPlayer.src = c.url;
+          videoPlayer.currentTime = st;
+          videoModal.classList.remove('hidden');
+          videoPlayer.play();
+          videoPlayer.ontimeupdate = function() {
+            if (videoPlayer.currentTime >= et) {
+              videoPlayer.currentTime = st;
+            }
+          };
+        }
+      }
+
+      closeVideoBtn.onclick = function() {
+        videoPlayer.pause();
+        youtubePlayer.src = '';
+        videoModal.classList.add('hidden');
+      };
+
+      // 初始渲染
+      renderClips();
+    })();
+  </script>
+</body>
+</html> 
